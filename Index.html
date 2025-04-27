@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Instagram Engagement Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A mobile-responsive web app where users can register, manage Instagram accounts, earn and spend points for Instagram engagement, and process payments.">
+  <!-- Tailwind CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <!-- Google Fonts: Inter -->
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@3.3.1/latin.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
+  <style>
+    html {
+      font-family: 'Inter', sans-serif;
+      background: #f9fafb;
+    }
+    input, select, button, textarea {
+      font-family: inherit;
+    }
+    /* Hide input[type="file"] by default and style button */
+    .custom-file-input::-webkit-file-upload-button {
+      visibility: hidden;
+    }
+    .custom-file-input::before {
+      content: "Upload Screenshot";
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      border-radius: 0.375rem;
+      border: none;
+      padding: 0.5rem 1.25rem;
+      outline: none;
+      white-space: nowrap;
+      cursor: pointer;
+      font-size: 0.90rem;
+      margin-right: 1rem;
+    }
+    .custom-file-input:hover::before {
+      background: #1d4ed8;
+    }
+    .custom-file-input:active::before {
+      background: #1e40af;
+    }
+    @media print {
+      /* Remove sticky header on print/PDF, so points show up on top */
+      .print\:static {
+        position: static !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="mx-auto max-w-2xl p-4">
+    <!-- Header -->
+    <header class="print:static sticky top-0 bg-white z-20 shadow-md rounded-t-lg flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 mb-2">
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-2 text-2xl font-bold tracking-tight text-blue-700">
+          <span class="fa-brands fa-instagram"></span>
+          <span>InstaEngage</span>
+        </div>
+        <div class="flex flex-row items-center gap-2">
+          <span id="userPoints" class="inline-flex items-center rounded-full bg-blue-100 text-blue-800 text-base px-4 py-1 font-bold">
+            <span class="fa-solid fa-coins mr-1"></span>
+            <span id="pointsTotal">0</span> pts
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <nav class="mb-3">
+      <ul class="flex flex-wrap gap-2 text-sm font-semibold">
+        <li><button class="tabBtn px-3 py-2 rounded hover:bg-blue-100 focus:outline-none focus:bg-blue-200" data-tab="dashboard"><i class="fa fa-home"></i> Dashboard</button></li>
+        <li><button class="tabBtn px-3 py-2 rounded hover:bg-blue-100 focus:outline-none focus:bg-blue-200" data-tab="instagram"><i class="fa-brands fa-instagram"></i> My Instagram</button></li>
+        <li><button class="tabBtn px-3 py-2 rounded hover:bg-blue-100 focus:outline-none focus:bg-blue-200" data-tab="tasks"><i class="fa fa-tasks"></i> Tasks</button></li>
+        <li><button class="tabBtn px-3 py-2 rounded hover:bg-blue-100 focus:outline-none focus:bg-blue-200" data-tab="spend"><i class="fa fa-bullhorn"></i> Promote</button></li>
+        <li><button class="tabBtn px-3 py-2 rounded hover:bg-blue-100 focus:outline-none focus:bg-blue-200" data-tab="buy"><i class="fa fa-wallet"></i> Buy Points</button></li>
+        <li><button class="tabBtn px-3 py-2 rounded hover:bg-blue-100 focus:outline-none focus:bg-blue-200" data-tab="admin" id="adminTabBtn" style="display:none"><i class="fa fa-user-shield"></i> Admin Panel</button></li>
+      </ul>
+    </nav>
+
+    <!-- Auth/Login -->
+    <section id="authSection" class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-semibold mb-2"><i class="fa fa-user-plus text-blue-600"></i> Register / Login</h2>
+      <form id="authForm" class="space-y-3">
+        <label class="block">
+          <span class="block font-medium mb-1">Email</span>
+          <input required type="email" id="authEmail" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-400 focus:ring-blue-300" placeholder="your@email.com">
+        </label>
+        <label class="block">
+          <span class="block font-medium mb-1">Password</span>
+          <input required type="password" id="authPassword" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-400 focus:ring-blue-300" placeholder="Enter password">
+        </label>
+        <div class="flex flex-row items-center gap-2 mt-2">
+          <button type="submit" class="w-full py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold"><span class="fa fa-sign-in-alt"></span> Login / Register</button>
+        </div>
+        <div id="authError" class="text-sm text-red-600"></div>
+      </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboardSection" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-bold mb-4 tracking-tight flex items-center gap-2"><span class="fa fa-home"></span> Dashboard</h2>
+      <div class="mb-4">
+        <p class="text-gray-700 mb-1 text-base">Welcome, <span id="dashboardUserEmail" class="font-semibold text-blue-700"></span>!</p>
+        <p class="text-gray-600 text-sm mb-2">Total Points: <span id="dashboardPoints" class="font-bold text-blue-600">0</span></p>
+        <button id="logoutBtn" class="inline-block px-4 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm"><span class="fa fa-sign-out-alt"></span> Logout</button>
+      </div>
+      <div class="border-t pt-4 mt-5">
+        <h3 class="font-semibold text-gray-900 mb-1">How it Works:</h3>
+        <ul class="pl-4 list-disc text-gray-700 text-base space-y-1">
+          <li>Register and add your Instagram profiles.</li>
+          <li>Complete tasks (follow / like) to earn points (+10 for follow, +1 for like).</li>
+          <li>Points unlock promotion tasks, letting you get followers and likes from others.</li>
+          <li>Buy points via Google Pay / PhonePe / Paytm, upload payment screenshot, and admin will verify within 10 minutes.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Instagram Account Management -->
+    <section id="instagramSection" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="fa-brands fa-instagram"></span> My Instagram Accounts</h2>
+      <form id="igForm" class="space-y-4 mb-6">
+        <div>
+          <label class="block font-medium mb-1">Instagram Username (ID)</label>
+          <input required id="igUsername" type="text" class="block w-full rounded border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-100" placeholder="e.g., myusername">
+        </div>
+        <div>
+          <label class="block font-medium mb-1">Instagram Profile Link</label>
+          <input required id="igLink" type="url" class="block w-full rounded border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-100" placeholder="https://instagram.com/yourid">
+        </div>
+        <div>
+          <label class="block font-medium mb-1">Profile Picture URL</label>
+          <input required id="igPicLink" type="url" class="block w-full rounded border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-100" placeholder="Direct link ending with .jpg or .png">
+          <small class="text-gray-500 text-xs">For privacy, do not use personal photos.</small>
+        </div>
+        <div>
+          <button type="submit" class="py-2 px-4 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"><span class="fa fa-plus-circle"></span> Add Instagram Account</button>
+        </div>
+      </form>
+      <h3 class="font-semibold text-gray-900 mb-2">Your Added IG Accounts:</h3>
+      <ul id="igAccountsList" class="flex flex-col gap-4"></ul>
+    </section>
+
+    <!-- Tasks: Follow / Like -->
+    <section id="tasksSection" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="fa fa-tasks"></span> Engagement Tasks</h2>
+      <p class="text-gray-700 mb-2">Earn points by following or liking other users' Instagram profiles or posts. <b>Complete one task at a time.</b></p>
+      <div id="tasksList" class="space-y-4"></div>
+      <div id="tasksStatus" class="mt-4 text-green-600 font-semibold text-base"></div>
+      <div class="mt-6">
+        <button id="refreshTasksBtn" class="px-4 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm"><span class="fa fa-sync-alt"></span> Refresh Tasks</button>
+      </div>
+    </section>
+
+    <!-- Spend Points / Promote -->
+    <section id="spendSection" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="fa fa-bullhorn text-pink-600"></span> Promote via Points</h2>
+      <div class="mb-4">
+        <label class="block font-medium mb-1">Choose Instagram Account to Promote</label>
+        <select id="promoIGSelect" class="w-full rounded border-gray-300 focus:ring-blue-100"></select>
+      </div>
+      <div class="mb-4">
+        <label class="block font-medium mb-1">Promotion Type</label>
+        <select id="promoType" class="w-full rounded border-gray-300 focus:ring-blue-100">
+          <option value="followers">Followers (200 pts for 500+ users)</option>
+          <option value="likes">Likes (100 pts for 200+ users)</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <button id="promoBtn" class="py-2 px-4 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700">Spend Points to Promote</button>
+      </div>
+      <div id="promoStatus" class="mt-2 text-base font-semibold"></div>
+      <p class="text-gray-500 text-sm mt-3 border-t pt-2"><i class="fa fa-info-circle"></i> Your promoted Instagram account or post will be added to the Tasks tab for other users to follow or like.</p>
+    </section>
+
+    <!-- Buy Points -->
+    <section id="buySection" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="fa fa-wallet"></span> Buy Points</h2>
+      <ol class="mb-2 text-base text-gray-800 list-decimal pl-5 space-y-1">
+        <li>Send payment to <span class="font-mono font-bold text-blue-800 bg-blue-100 px-1 py-0.5 rounded">kmarathe59@ibl</span> via <b>Google Pay</b>, <b>PhonePe</b>, or <b>Paytm</b>.</li>
+        <li>Minimum pack: ₹50 = 550 points.</li>
+        <li>After payment, upload your payment screenshot below.</li>
+        <li>Points will be added within <b>10 minutes</b> of admin verification.</li>
+      </ol>
+      <div class="mb-4">
+        <a href="https://pay.google.com/" target="_blank" rel="noopener" class="inline-block mr-2 px-3 py-1 rounded bg-green-700 hover:bg-green-800 text-white"><span class="fa fa-google"></span> Google Pay</a>
+        <a href="https://www.phonepe.com/" target="_blank" rel="noopener" class="inline-block mr-2 px-3 py-1 rounded bg-indigo-700 hover:bg-indigo-800 text-white"><span class="fa fa-mobile-alt"></span> PhonePe</a>
+        <a href="https://paytm.com/" target="_blank" rel="noopener" class="inline-block px-3 py-1 rounded bg-blue-700 hover:bg-blue-800 text-white"><span class="fa fa-credit-card"></span> Paytm</a>
+      </div>
+      <form id="paymentUploadForm" class="mb-3">
+        <label class="block font-medium mb-1">Upload Payment Screenshot (for Admin Verification)</label>
+        <input required type="file" accept="image/jpeg,image/png" class="custom-file-input rounded mb-2" id="paymentScreenshot">
+        <button type="submit" class="px-4 py-2 bg-blue-700 text-white rounded font-semibold hover:bg-blue-800"><span class="fa fa-upload"></span> Upload Screenshot</button>
+        <div id="paymentUploadStatus" class="text-green-700 font-semibold mt-2"></div>
+      </form>
+    </section>
+
+    <!-- Admin Panel -->
+    <section id="adminSection" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="fa fa-user-shield"></span> Admin Panel</h2>
+      <p class="mb-4 text-gray-700 text-sm">Payment verification, points adjustment, and task management. Only for admin users.</p>
+      <!-- Payment Verification Table -->
+      <div class="mb-7">
+        <h3 class="font-semibold mb-1 text-gray-800 text-base"><span class="fa fa-money-check-alt"></span> Pending Payments</h3>
+        <table class="min-w-full bg-white border mt-2 text-sm">
+          <thead>
+            <tr>
+              <th class="px-2 py-1 border-b">User Email</th>
+              <th class="px-2 py-1 border-b">Screenshot</th>
+              <th class="px-2 py-1 border-b">Add Points</th>
+              <th class="px-2 py-1 border-b">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminPaymentsTable"></tbody>
+        </table>
+      </div>
+      <!-- Task Management -->
+      <div>
+        <h3 class="font-semibold mb-1 text-gray-800 text-base"><span class="fa fa-tasks"></span> Pending Promotions</h3>
+        <table class="min-w-full bg-white border mt-2 text-sm">
+          <thead>
+            <tr>
+              <th class="px-2 py-1 border-b">IG User</th>
+              <th class="px-2 py-1 border-b">Type</th>
+              <th class="px-2 py-1 border-b">Target</th>
+              <th class="px-2 py-1 border-b">Approve</th>
+            </tr>
+          </thead>
+          <tbody id="adminPromosTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Modal: Task Timer -->
+    <div id="taskTimerModal" class="hidden fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-40">
+      <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm relative flex flex-col items-center justify-center text-center">
+        <span class="absolute right-2 top-2 cursor-pointer text-lg text-gray-500 hover:text-blue-600" id="closeTimerModalBtn"><i class="fa fa-times"></i></span>
+        <div class="mb-3 text-blue-700 text-3xl"><i class="fa-solid fa-hourglass-half"></i></div>
+        <div class="mb-2 font-semibold text-lg">Please stay on the Instagram page for at least <span class="text-blue-600">30 seconds</span>.</div>
+        <div id="taskCountdown" class="text-2xl font-bold text-pink-700 mb-2"></div>
+        <div id="taskTimerInstructions" class="text-gray-700 text-base mb-3">Complete the required action. Once 30 seconds are up, your points will be added.</div>
+        <button id="timerDoneBtn" class="hidden px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white font-semibold"><span class="fa fa-check"></span> Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple in-file user/session "database" (simulate with localStorage)
+    const appData = {
+      users: JSON.parse(localStorage.getItem('users') || '{}'), // keyed by email
+      auth: JSON.parse(localStorage.getItem('auth') || 'null'), // { email: string }
+      paymentUploads: JSON.parse(localStorage.getItem('paymentUploads') || '[]'), // [{email, url, pending:true}]
+      promos: JSON.parse(localStorage.getItem('promos') || '[]'), // [{id, igAccount, type, pending:true}]
+      tasks: JSON.parse(localStorage.getItem('tasks') || '[]') // {id, igPicLink, igLink, type, displayName, owner, key, active }
+    };
+
+    // Helper for unique IDs
+    function uid(len=8) {
+      return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      ).slice(0,len);
+    }
+
+    // Current user state
+    let currentUser = null;
+
+    // UI tab control
+    function showTab(tab) {
+      ['dashboardSection', 'instagramSection', 'tasksSection', 'spendSection', 'buySection', 'adminSection'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      {
+        if(document.getElementById(tab+"Section")) document.getElementById(tab+"Section").classList.remove('hidden');
+      }
+      // Highlight tab button
+      document.querySelectorAll('.tabBtn').forEach(btn=>{
+        if(btn.dataset.tab === tab) {
+          btn.classList.add('bg-blue-200','text-blue-900');
+        } else {
+          btn.classList.remove('bg-blue-200','text-blue-900');
+        }
+      });
+    }
+
+    // ========== AUTH ===========
+    function setUser(email) {
+      currentUser = appData.users[email];
+      appData.auth = { email };
+      localStorage.setItem('auth', JSON.stringify(appData.auth));
+    }
+    function logoutUser() {
+      currentUser = null;
+      appData.auth = null;
+      localStorage.removeItem('auth');
+      location.reload();
+    }
+    function checkAdmin() {
+      // For demo purposes, admin = any user with "@admin" in the email (e.g. admin@admin.com)
+      return currentUser && currentUser.email.endsWith("@admin.com");
+    }
+    function syncUserPointsView() {
+      const pts = currentUser ? currentUser.points : 0;
+      document.getElementById('userPoints').querySelector('#pointsTotal').textContent = pts;
+      if(document.getElementById('dashboardPoints')) document.getElementById('dashboardPoints').textContent = pts;
+    }
+
+    // ========== APP INIT ===========
+    function appInit() {
+      // If user signed in, show dashboard
+      if(appData.auth && appData.auth.email && appData.users[appData.auth.email]) {
+        currentUser = appData.users[appData.auth.email];
+        document.getElementById('authSection').classList.add('hidden');
+        // Set email in dashboard
+        document.getElementById('dashboardUserEmail').textContent = currentUser.email;
+        // Show points
+        syncUserPointsView();
+        document.getElementById('userPoints').style.display = 'inline-flex';
+        // Admin panel tab
+        if(checkAdmin()) document.getElementById('adminTabBtn').style.display = '';
+        else document.getElementById('adminTabBtn').style.display = 'none';
+        showTab('dashboard');
+        refreshIGAccounts();
+        refreshPromoDropdown();
+        refreshTasks();
+        refreshAdminTables();
+      } else {
+        // Not logged in
+        document.getElementById('authSection').classList.remove('hidden');
+        document.getElementById('userPoints').style.display = 'none';
+        showTab('dashboard');
+      }
+    }
+
+    // ========== AUTH FORM ===========
+    document.getElementById('authForm').onsubmit = function(e){
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim().toLowerCase();
+      const pw = document.getElementById('authPassword').value.trim();
+      if(!/\S+@\S+\.\S+/.test(email)) { document.getElementById('authError').textContent = "Enter a valid email."; return; }
+      if(pw.length < 4) { document.getElementById('authError').textContent = "Password too short."; return; }
+      if(!appData.users[email]) {
+        // Register new
+        appData.users[email] = {
+          email, password:pw, points:0,
+          igAccounts: []
+        };
+      }
+      if(appData.users[email].password !== pw) {
+        document.getElementById('authError').textContent = "Incorrect password.";
+        return;
+      }
+      setUser(email);
+      localStorage.setItem('users',JSON.stringify(appData.users));
+      document.getElementById('authError').textContent = '';
+      appInit();
+    };
+
+    document.getElementById('logoutBtn').onclick = logoutUser;
+
+    // ========= TABS UI ==========
+    document.querySelectorAll('.tabBtn').forEach(btn=>{
+      btn.onclick = function() {
+        let t = btn.dataset.tab;
+        showTab(t);
+        if(t === "instagram") refreshIGAccounts();
+        if(t === "spend") refreshPromoDropdown();
+        if(t === "tasks") refreshTasks();
+        if(t === "admin") refreshAdminTables();
+      }
+    });
+
+    // ========== INSTAGRAM ACCOUNTS ===========
+    function refreshIGAccounts() {
+      // List IG accounts
+      let list = document.getElementById('igAccountsList');
+      list.innerHTML = '';
+      currentUser.igAccounts.forEach((acc,idx)=>{
+        let el = document.createElement('li');
+        el.className = "flex flex-row items-center gap-4 rounded-md border px-4 py-2 bg-gray-50";
+        el.innerHTML = `
+          <img src="${acc.igPicLink}" alt="profile" class="w-12 h-12 rounded-full ring-2 ring-blue-300 object-cover">
+          <div class="flex-grow">
+            <div class="font-semibold text-gray-900 flex gap-2 items-center"><span class="fa-brands fa-instagram"></span> ${acc.igUsername}</div>
+            <a href="${acc.igLink}" target="_blank" class="text-blue-700 text-sm hover:underline">${acc.igLink}</a>
+          </div>
+          <button class="ml-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs" onclick="removeIGAccount(${idx})"><span class="fa fa-trash"></span> Remove</button>
+        `;
+        list.appendChild(el);
+      });
+    }
+    window.removeIGAccount = function(idx) {
+      currentUser.igAccounts.splice(idx,1);
+      appData.users[currentUser.email] = currentUser;
+      localStorage.setItem('users', JSON.stringify(appData.users));
+      refreshIGAccounts(); refreshPromoDropdown();
+    };
+    document.getElementById('igForm').onsubmit = function(e) {
+      e.preventDefault();
+      let igUsername = document.getElementById('igUsername').value.trim();
+      let igLink = document.getElementById('igLink').value.trim();
+      let igPicLink = document.getElementById('igPicLink').value.trim();
+      if(!/^https?:\/\//.test(igLink)) { alert('Invalid IG Link'); return; }
+      if(!/^https?:\/\//.test(igPicLink)) { alert('Invalid Image URL'); return; }
+      currentUser.igAccounts.push({ igUsername, igLink, igPicLink });
+      appData.users[currentUser.email] = currentUser;
+      localStorage.setItem('users', JSON.stringify(appData.users));
+      document.getElementById('igForm').reset();
+      refreshIGAccounts(); refreshPromoDropdown();
+    };
+    // For usage in other features
+    function getMyIGAccounts() {
+      return currentUser.igAccounts;
+    }
+
+    // ============ PROMO POINTS ============
+    function refreshPromoDropdown() {
+      let sel = document.getElementById('promoIGSelect');
+      sel.innerHTML = '';
+      getMyIGAccounts().forEach((acc,idx)=>{
+        let opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = acc.igUsername + " (" + acc.igLink + ")";
+        sel.appendChild(opt);
+      });
+    }
+    document.getElementById('promoBtn').onclick = function() {
+      let idx = parseInt(document.getElementById('promoIGSelect').value,10);
+      let type = document.getElementById('promoType').value;
+      // Followers: 200 pts, Likes: 100 pts
+      let cost = type === 'followers' ? 200 : 100;
+      let summary = type === 'followers' ? "Followers (to 500+ users)" : "Likes (to 200+ users)";
+      if(isNaN(idx) || !getMyIGAccounts()[idx]) {
+        document.getElementById('promoStatus').textContent = "Please select your Instagram account to promote.";
+        document.getElementById('promoStatus').className = "text-red-700 font-semibold mt-3";
+        return;
+      }
+      if(currentUser.points < cost) {
+        document.getElementById('promoStatus').textContent = "Insufficient points! Earn or buy more points.";
+        document.getElementById('promoStatus').className = "text-red-700 font-semibold mt-3";
+        return;
+      }
+      // Create "pending" promo (admin must approve for demo)
+      appData.promos.push({
+        id: uid(), owner:currentUser.email,
+        igAccount: getMyIGAccounts()[idx],
+        type, pending:true
+      });
+      localStorage.setItem('promos', JSON.stringify(appData.promos));
+      // Deduct points
+      currentUser.points -= cost;
+      appData.users[currentUser.email] = currentUser;
+      localStorage.setItem('users',JSON.stringify(appData.users));
+      syncUserPointsView();
+      document.getElementById('promoStatus').textContent = `Promotion request submitted for "${getMyIGAccounts()[idx].igUsername}" (${summary}). Admin will review & list for users.`;
+      document.getElementById('promoStatus').className = "text-green-700 font-semibold mt-3";
+    };
+
+    // ========== TASK ENGINE ==========
+    // Each 'task' is a user-promotion: follow (profile) or like (image/video).
+    // Users can't do their own tasks.
+    function refreshTasks() {
+      let el = document.getElementById('tasksList');
+      el.innerHTML = '';
+      let myEmail = currentUser.email;
+      // Compose tasks from appData.tasks + active promos
+      let allTasks = [];
+      // Add approved promos to tasks
+      let tasksArr = [];
+      let renderTypes = [
+        {type:"followers", label:"+10 pts for Following", icon:"fa fa-user-plus", pts:10, actionLabel:"Follow"},
+        {type:"likes", label:"+1 pt for Like", icon:"fa fa-heart", pts:1, actionLabel:"Like"}
+      ];
+      // Build tasks
+      appData.promos.filter(p=>!p.pending).forEach((promo)=>{
+        let typeObj = renderTypes.find(t=>t.type === promo.type);
+        tasksArr.push({
+          id: promo.id, igAccount:promo.igAccount, type:promo.type, owner:promo.owner,
+          displayName: promo.igAccount.igUsername,
+          igPicLink: promo.igAccount.igPicLink,
+          igLink: promo.igAccount.igLink,
+          points: typeObj.pts,
+          icon: typeObj.icon,
+          actionLabel: typeObj.actionLabel
+        });
+      });
+      // Exclude own and already-completed tasks today
+      let myDone = (currentUser.tasksDoneToday||[]).filter(t=>t.date === (new Date()).toDateString())
+        .map(t=>t.taskId);
+      let availableTasks = tasksArr.filter(t=>t.owner!==myEmail && !myDone.includes(t.id));
+      if(availableTasks.length === 0) {
+        el.innerHTML = `<div class="py-8 text-gray-700 text-center">No tasks available now. Please check back later or invite friends!</div>`;
+        return;
+      }
+      // Only one at a time
+      let task = availableTasks[0];
+      let html = `
+        <div class="flex items-center gap-3 border p-3 rounded-xl bg-gray-50">
+          <img src="${task.igPicLink}" class="w-16 h-16 rounded-full ring-2 ring-pink-300 object-cover" alt="IG">
+          <div class="flex-1">
+            <b class="text-gray-900 text-lg">${task.displayName}</b>
+            <div class="flex items-center text-xs text-gray-500 mb-1">
+              <span class="${task.icon} text-pink-500 mr-1"></span> ${task.type === "followers" ? "Follow their IG" : "Like their post/photo"}
+            </div>
+            <a href="${task.igLink}" target="_blank" class="text-blue-700 hover:underline text-sm">${task.igLink}</a>
+          </div>
+          <button class="doTaskBtn px-4 py-3 rounded bg-blue-600 text-white font-semibold shadow hover:bg-blue-700" 
+            data-taskid="${task.id}" data-tasktype="${task.type}" data-taskurl="${task.igLink}" data-taskpts="${task.points}">
+            <span class="${task.icon} mr-2"></span> ${task.actionLabel} +${task.points}
+          </button>
+        </div>
+      `;
+      el.innerHTML = html;
+      // Attach event
+      document.querySelectorAll('.doTaskBtn').forEach(btn=>{
+        btn.onclick = function() {
+          let tId = btn.dataset.taskid, type = btn.dataset.tasktype, url = btn.dataset.taskurl, pts = parseInt(btn.dataset.taskpts);
+          openTaskTimer(tId, url, pts, type);
+        };
+      });
+    }
+    document.getElementById('refreshTasksBtn').onclick = function(){refreshTasks();};
+    // ========== TASK TIMER MODAL ==========
+    function openTaskTimer(taskId, url, pts, type) {
+      let timer = 30, interval = null;
+      let modal = document.getElementById('taskTimerModal');
+      let cDown = document.getElementById('taskCountdown');
+      let doneBtn = document.getElementById('timerDoneBtn');
+      cDown.textContent = "30s";
+      doneBtn.classList.add('hidden');
+      document.getElementById('taskTimerInstructions').textContent = "Click the button below to open the Instagram page. Complete the action, and please stay for at least 30 seconds for your points.";
+      modal.classList.remove('hidden');
+      // Open IG link
+      window.open(url,"_blank");
+      // Start countdown
+      let left = 30;
+      interval = setInterval(function(){
+        left--;
+        cDown.textContent = left+"s";
+        if(left <= 0) {
+          clearInterval(interval);
+          cDown.textContent = "Done!";
+          doneBtn.classList.remove('hidden');
+          document.getElementById('taskTimerInstructions').textContent = "If you completed the action, click Done to earn your points.";
+        }
+      }, 1000);
+      // Setup close/done
+      doneBtn.onclick = function() {
+        modal.classList.add('hidden');
+        // Mark task as done for today
+        let arr = currentUser.tasksDoneToday||[];
+        arr.push({date: (new Date()).toDateString(), taskId:taskId});
+        currentUser.tasksDoneToday = arr;
+        // Award points
+        currentUser.points = (currentUser.points||0) + pts;
+        appData.users[currentUser.email] = currentUser;
+        localStorage.setItem('users',JSON.stringify(appData.users));
+        syncUserPointsView();
+        document.getElementById('tasksStatus').textContent = `✓ ${type==="followers"?"Follow":"Like"} task completed. +${pts} pts!`;
+        setTimeout(()=>{document.getElementById('tasksStatus').textContent="";},4000);
+        setTimeout(refreshTasks,500);
+      };
+      document.getElementById('closeTimerModalBtn').onclick = function(){
+        modal.classList.add('hidden');
+        clearInterval(interval);
+      };
+    }
+
+    // =========== PAYMENT SCREENSHOT ===========
+    document.getElementById('paymentUploadForm').onsubmit = function(e){
+      e.preventDefault();
+      let fileInput = document.getElementById('paymentScreenshot');
+      if(!fileInput.files.length) return;
+      let file = fileInput.files[0];
+      let r = new FileReader();
+      r.onload = function(ev){
+        // Simulated upload: store blob as local object URL (in prod: upload to server)
+        let url = ev.target.result;
+        appData.paymentUploads.push({
+          id: uid(),
+          email: currentUser.email,
+          url,
+          pending:true
+        });
+        localStorage.setItem('paymentUploads', JSON.stringify(appData.paymentUploads));
+        document.getElementById('paymentUploadStatus').textContent = "Payment screenshot uploaded. Admin will verify within 10 minutes.";
+      };
+      r.readAsDataURL(file);
+      document.getElementById('paymentUploadForm').reset();
+    };
+
+    // =========== ADMIN PANEL ===========
+    function refreshAdminTables(){
+      // Payment verification
+      let t = document.getElementById('adminPaymentsTable');
+      t.innerHTML = '';
+      appData.paymentUploads.filter(p=>p.pending).forEach((row,idx)=>{
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${row.email}</td>
+          <td class="border px-2 py-1"><a href="${row.url}" target="_blank" rel="noopener" class="text-blue-700"><span class="fa fa-image"></span> Screenshot</a></td>
+          <td class="border px-2 py-1">
+            <input type="number" min="1" class="p-1 rounded border w-20" value="550" id="addPoints_${row.id}">
+          </td>
+          <td class="border px-2 py-1">
+            <button class="px-3 py-1 bg-green-700 text-white rounded text-xs" onclick="adminApprovePayment('${row.id}')"><span class="fa fa-check"></span> Approve</button>
+            <button class="px-3 py-1 bg-red-700 text-white rounded text-xs" onclick="adminRejectPayment('${row.id}')"><span class="fa fa-times"></span> Reject</button>
+          </td>
+        `;
+        t.appendChild(tr);
+      });
+      // Promo approvals
+      let t2 = document.getElementById('adminPromosTable');
+      t2.innerHTML = '';
+      appData.promos.filter(p=>p.pending).forEach((row,idx)=>{
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${row.igAccount.igUsername} / ${row.owner}</td>
+          <td class="border px-2 py-1">${row.type === "followers" ? "Followers" : "Likes"}</td>
+          <td class="border px-2 py-1">${row.igAccount.igLink}</td>
+          <td class="border px-2 py-1">
+            <button class="px-3 py-1 bg-blue-600 text-white rounded text-xs" onclick="adminApprovePromo('${row.id}')"><span class="fa fa-check"></span> Approve</button>
+          </td>
+        `;
+        t2.appendChild(tr);
+      });
+    }
+    window.adminApprovePayment = function(id) {
+      let idx = appData.paymentUploads.findIndex(p=>p.id===id);
+      if(idx === -1) return;
+      let email = appData.paymentUploads[idx].email;
+      let pts = parseInt(document.getElementById("addPoints_"+id).value,10);
+      let usr = appData.users[email];
+      if(usr) {
+        usr.points += pts;
+        appData.users[email]=usr;
+        localStorage.setItem('users',JSON.stringify(appData.users));
+      }
+      appData.paymentUploads[idx].pending = false;
+      localStorage.setItem('paymentUploads', JSON.stringify(appData.paymentUploads));
+      refreshAdminTables();
+    };
+    window.adminRejectPayment = function(id){
+      let idx = appData.paymentUploads.findIndex(p=>p.id===id);
+      if(idx===-1)return;
+      appData.paymentUploads[idx].pending=false;
+      localStorage.setItem('paymentUploads', JSON.stringify(appData.paymentUploads));
+      refreshAdminTables();
+    };
+    window.adminApprovePromo = function(id){
+      let idx = appData.promos.findIndex(x=>x.id===id);
+      if(idx===-1)return;
+      appData.promos[idx].pending = false;
+      localStorage.setItem('promos', JSON.stringify(appData.promos));
+      refreshAdminTables();
+    };
+
+    // ========== BOOTSTRAP ===========
+    appInit();
+  </script>
+</body>
+</html>
+
